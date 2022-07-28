@@ -14,18 +14,23 @@ select * from public.film_actor;
 select * from public.rental;
 select * from public.inventory;
 
-with rental_table_from_actor as 
+with result_table as 
 (
-        select public.film_actor.actor_id as rental_table_from_actor_id, (public.rental.return_date::timestamp - public.rental.rental_date::timestamp) as time_of_rental from public.rental 
-        inner join public.inventory on public.rental.inventory_id = public.inventory.inventory_id
-        inner join public.film_actor on public.inventory.film_id = public.film_actor.film_id
+        with rental_table_from_actor as 
+        (
+                select public.film_actor.actor_id as rental_table_from_actor_id, (public.rental.return_date::timestamp - public.rental.rental_date::timestamp) as time_of_rental from public.rental 
+                inner join public.inventory on public.rental.inventory_id = public.inventory.inventory_id
+                inner join public.film_actor on public.inventory.film_id = public.film_actor.film_id
+        )
+        select public.actor.actor_id, public.actor.first_name, public.actor.last_name,
+        sum(time_of_rental) as sum_of_rental from rental_table_from_actor
+        inner join public.actor on rental_table_from_actor_id = public.actor.actor_id
+        group by public.actor.actor_id
+        order by sum_of_rental desc
+        limit 10
 )
-select public.actor.actor_id, public.actor.first_name, public.actor.last_name,
-sum(time_of_rental) as sum_of_rental from rental_table_from_actor
-inner join public.actor on rental_table_from_actor_id = public.actor.actor_id
-group by public.actor.actor_id
-order by sum_of_rental asc
-limit 10;
+select actor_id, first_name, last_name, sum_of_rental from result_table
+order by sum_of_rental;
 
 -- Task 3
 select * from public.payment;
@@ -140,4 +145,5 @@ select public.city.city, public.category.name, result_table_with_rank.sum_of_hou
 inner join public.city on result_table_with_rank.city_id = public.city.city_id
 inner join public.category on result_table_with_rank.category_id = public.category.category_id
 where result_table_with_rank.rank_of_sum_rental = 1
-and (lower(city) like 'a%' or lower(city) like '%-%');
+and (lower(city) like 'a%' or lower(city) like '%-%')
+order by sum_of_hour_of_rental desc;
